@@ -26,6 +26,7 @@ Through this lab we will explore core concepts of scale using R. Here, we focus 
 #load packages
 library(terra)
 library(tidyverse)
+library(sf)
 ```
 
 
@@ -387,7 +388,7 @@ f2km <- rep(NA, length = nrow(sites))
 
 ```{r}
 #with for loop (all five buffers: 910s; <=3km: 228s)
-xxx for(i in 1:nrow(sites)) {
+for(i in 1:nrow(sites)) {
   f1km[i] <- BufferCover(coords=sites,size=1000,landcover=forest,grain=grainarea)
   f2km[i] <- BufferCover(coords=sites,size=2000,landcover=forest,grain=grainarea)
   print(i)
