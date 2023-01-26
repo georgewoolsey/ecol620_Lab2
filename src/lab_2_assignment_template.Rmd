@@ -1,0 +1,113 @@
+---
+title: "Lab 2"
+subtitle: "ECOL 620 - Applications in Landscape Ecology"
+author: "First Last"
+date: "MM/DD/YYYY"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Rules
+1. Using the provided R Markdown template, answer all questions and show your R code where necessary. Note, some questions are just plain text written answers.
+2. Complete your assignment using the R markdown file and submit individual assignments to Canvas. Knit your script and submit an .html file on Canvas. Please use  the following naming convention: lab2_firstname_lastname.html (ex. lab2_kyle_horton.html).  Note, we will not grade labs in any other format.
+
+## Question 1
+
+Briefly describe (1-2 sentences) what each of the following functions achieve. All of these functions are seen throughout the Lab #2 example code. Use complete sentences (1 pt each). 
+
+* `crop()`
+* `ext()`
+* `disagg()`
+* `aggregate()`
+* `global()`
+* `mask()`
+* `res()`
+* `st_buffer()`
+* `rpois()`
+
+## Question 2 
+Create a 15 by 15 raster using the Poisson distribution to randomly draw the values. Design the raster to have a mean and variance of 5 (approximately). Generate a figure of the raster with cell values labeled (e.g., follow the aesthetic of Figure 2.5a, although with color). Include code to generate the raster and figure. For this example, use the supplied raster plotting code (don’t worry about ggplot, yet). Report the mean and variance of the newly generated raster. (3 pts)
+
+```{r}
+
+```
+
+
+## Question 3
+Within the “elevation” folder, there is a digital elevation raster of the southern Colorado areaAggregate (using the mean) the elevation raster by factors of 5, 30, 55, 80, …255 (i.e., by increments of 25). Plot the spatial grain versus spatial variance, using a log scale. Note, global won't calculate `var`, but will calculate `sd`. Describe the relationship between the two variables. (10 pts)
+
+
+```{r}
+#Hint for plotting:
+#ggplot()+
+#  geom_point()+
+#  theme_classic()+
+#  labs(y = "Log(spatial variance)", x = "Log( grain)")
+```
+
+
+## Question 4
+Include a plot of the elevation raster aggregated by a factor of 55 using ggplot. Please include a state overlay (see code from Lab #1 for state data, `states_map <- map_data("state")`). If you use a projection, ggplot will take longer to process the image. Re-projecting the data is not necessary for this exercise. (8 pts) 
+
+
+```{r}
+#Hint: Use the following lines of code to format the raster. 
+#SRTM_df <- as.data.frame(SRTM_df, xy=T); #ggplot doesn’t handle rasters that well. Convert to a dataframe
+#colnames(SRTM_df) <- c("X","Y","DEM")
+#head(SRTM_df)
+```
+
+
+```{r}
+#Plotting code
+#ggplot(don’t insert anything here)+
+#  geom_raster(data=insert the elevation dataframe information, aes(x=?, y=?, fill=?))+
+#  scale_fill_gradientn(insert a color scale)+
+#  geom_polygon(insert the state polygon information)+
+#  coord_cartesian(insert the extent of the elevation raster)+
+#  theme_classic(don’t insert anything here)+
+#  labs(y = "Latitude", x = "Longitude")
+```
+
+# Five-lined Skink Data (multi-scale analysis)
+
+
+## Question 5
+Once you have cropped raster “nlcd” using a 10km barrier from the min and max coordinates of the reptile sampling locations (Lines 245-249), how many cells remain? What percent reduction did you see from the original raster?  (3 pts)
+
+```{r}
+
+```
+
+
+## Question 6
+Using intervals of 500 m and a maximum range of 5000 m (minimum range of 500 m), where do you see the greatest correlation in each pairwise combination of scales? Is this surprising? Plot the scatter plot of the greatest pair-wise correlation combination. See Figure 2.9 for an example of many similar pairwise plots. (5 pts)
+
+
+```{r}
+#Hint:
+#ggplot()+
+#  geom_point()+
+#  theme_classic()+
+#  labs(y = "Forest cover surrounding sample location at XXkm (%)", x = "Forest cover surrounding sample   location at XXkm (%))")
+```
+
+## Question 7
+Generate Figure 2.11 (only panels a and b) using ggplot. Use 500 m intervals and a maximum range of 5000 m (minimum range of 500 m). What does this suggest about the scale of drivers of occurrence for five-lined skinks? Where is the strongest association? How does your conclusion differ (or not) from the results of Fletcher and Fortin? Do you believe the scale of effect has been captured by the scales sampled? Be sure to add appropriate labels. (12 pts) 
+
+
+```{r}
+#Hint (for the beta plot):
+#ggplot()+
+#  geom_point(data=XX_data, aes(x=XX_size, y=XX_coef))+
+#  geom_errorbar(data=buffer_data, aes(x=XX,ymin=XX, ymax=XX), colour="black", width=.1)
+```
+
+
+
+
+
+
