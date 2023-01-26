@@ -46,6 +46,8 @@ library(kableExtra)
 library(USAboundaries)
 library(sf)
 library(terra)
+# set seed
+set.seed(11)
 ```
 
 
@@ -92,7 +94,7 @@ raster_temp %>% as.data.frame(xy = TRUE) %>%
     scale_x_continuous(expand = c(0, 0)) +
     scale_y_continuous(expand = c(0, 0)) +
     labs(
-      title = "15x15 raster with values drawn from the Poisson distribution"
+      title = paste0(raster_size,"x",raster_size, " raster with values drawn from the Poisson distribution")
       , subtitle = paste0(
         "Mean: "
         , terra::global(raster_temp, fun = "mean")[[1]] %>% scales::comma(accuracy = .01)
@@ -106,7 +108,9 @@ raster_temp %>% as.data.frame(xy = TRUE) %>%
     )
 ```
 
+<span style="color: teal;">
 Based on the example raster created from random values drawn from a Poisson distribution with $\lambda = 5$, the mean cell value is **`r terra::global(raster_temp, fun = "mean")[[1]] %>% scales::comma(accuracy = .01)`** and the variance of the entire raster extent is is **`r terra::global(raster_temp, fun = "sd")[[1]]^2 %>% scales::comma(accuracy = .01)`**.
+</span>
 
 # Question 3
 
@@ -122,7 +126,8 @@ Within the “elevation” folder, there is a digital elevation raster of the so
 ```
 
 
-## Question 4
+# Question 4
+
 Include a plot of the elevation raster aggregated by a factor of 55 using ggplot. Please include a state overlay (see code from Lab #1 for state data, `states_map <- map_data("state")`). If you use a projection, ggplot will take longer to process the image. Re-projecting the data is not necessary for this exercise. (8 pts) 
 
 
@@ -178,8 +183,6 @@ Generate Figure 2.11 (only panels a and b) using ggplot. Use 500 m intervals and
 #  geom_point(data=XX_data, aes(x=XX_size, y=XX_coef))+
 #  geom_errorbar(data=buffer_data, aes(x=XX,ymin=XX, ymax=XX), colour="black", width=.1)
 ```
-
-
 
 
 
