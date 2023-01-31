@@ -42,6 +42,7 @@ library(latex2exp)
 library(ggrepel)
 library(cowplot)
 library(kableExtra)
+library(GGally)
 # spatial analysis
 library(USAboundaries)
 library(sf)
@@ -239,13 +240,13 @@ sites <- sf::st_read("../data/reptiledata/reptiledata.shp") %>%
 my_col <- c("black","blue","darkorange","red","darkred","grey30","grey50", "lightgreen",
             "green", "darkgreen", "yellow", "goldenrod", "purple", "orchid","lightblue", "lightcyan")
 # crop nlcd to site data + buffer
-my_buffer_m <- 10000 # 10000 = 10,000m = 10km
+my_buffer_m_temp <- 10000 # 10000 = 10,000m = 10km
 nlcd_crop <- nlcd %>% 
   terra::crop(terra::ext(
-    sf::st_bbox(sites)[1] - my_buffer_m # xmin
-    , sf::st_bbox(sites)[3] + my_buffer_m # xmax
-    , sf::st_bbox(sites)[2] - my_buffer_m # ymin
-    , sf::st_bbox(sites)[4] + my_buffer_m # ymax
+    sf::st_bbox(sites)[1] - my_buffer_m_temp # xmin
+    , sf::st_bbox(sites)[3] + my_buffer_m_temp # xmax
+    , sf::st_bbox(sites)[2] - my_buffer_m_temp # ymin
+    , sf::st_bbox(sites)[4] + my_buffer_m_temp # ymax
   )) 
 # calculate cell reduction
 cell_reduction <- terra::ncell(nlcd) - terra::ncell(nlcd_crop)
@@ -256,11 +257,194 @@ pct_cell_reduction <- (terra::ncell(nlcd_crop) - terra::ncell(nlcd)) / terra::nc
 The original NLCD raster contained **`r terra::ncell(nlcd) %>% scales::comma(accuracy = 1)`** cells. The NLCD raster cropped to the survey site data extent with a 10km buffer contains **`r terra::ncell(nlcd_crop) %>% scales::comma(accuracy = 1)`** cells. The number of cells decreased by **`r cell_reduction %>% scales::comma(accuracy = 1)`** for a **`r pct_cell_reduction %>% scales::percent(accuracy = 0.1)`** change.
 </span>
 
+```{r, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+remove(list = ls()[grep("_temp",ls())])
+gc()
+```
+
 ## Question 6
+
 Using intervals of 500 m and a maximum range of 5000 m (minimum range of 500 m), where do you see the greatest correlation in each pairwise combination of scales? Is this surprising? Plot the scatter plot of the greatest pair-wise correlation combination. See Figure 2.9 for an example of many similar pairwise plots. (5 pts)
 
+### Data Preparation
 
 ```{r}
+# get nlcd classes
+nlcd_classes <- levels(nlcd_crop)[[1]]
+# define forest 0/1 based on nlcd class
+  # 41, 42, and 43 (conifer, deciduous and mixed forests)
+nlcd_classes_forest <- as.numeric(nlcd_classes %in% c(41,42,43))
+#create reclassify matrix: first col: original; second: change to
+nlcd_reclass_matrix <- cbind(nlcd_classes, nlcd_classes_forest)
+#reclassify with classify function is faster
+forest_crop <- terra::classify(nlcd_crop, nlcd_reclass_matrix)
+# define function to calculate pct forest cover at one site
+fn_get_site_fcov <- function(my_site_row, hey_buffer_m){
+  return(
+    data.frame(
+      site = sites$site[my_site_row]
+      , buffer_m = hey_buffer_m
+      , pct_forest_cover = forest_crop %>% 
+          terra::crop(
+            sites[my_site_row,] %>% 
+              sf::st_buffer(dist = hey_buffer_m)
+          ) %>% 
+          terra::global(fun = "mean", na.rm = TRUE) %>% 
+          as.numeric()
+    )
+  )
+}
+# define function to apply to all rows of data set
+fn_get_df_fcov <- function(my_buffer_m) {
+  c(1:nrow(sites)) %>% 
+    purrr::map_dfr(fn_get_site_fcov, hey_buffer_m = my_buffer_m)
+}
+# apply to sequence list to return data frame
+df_buffer_fcov <- c(500, seq(from = 1000, to = 5000, by = 1000)) %>% 
+  purrr::map_dfr(fn_get_df_fcov)
+# tidyr::pivot_wider for plot using GGally::ggpairs and correlation matrix
+df_buffer_fcov_wide <- df_buffer_fcov %>% 
+  dplyr::mutate(
+    pct_forest_cover = pct_forest_cover*100
+    , buffer_name = ifelse(
+        buffer_m < 1000
+        , paste0(buffer_m, "m")
+        , paste0(buffer_m/1000, "km")
+      )
+  ) %>% 
+  dplyr::select(-c(buffer_m)) %>% 
+  tidyr::pivot_wider(
+    names_from = buffer_name
+    , values_from = pct_forest_cover
+    , names_glue = "buffer_{buffer_name}"
+  )
+# calculate correlation matrix
+  cor_matrix <- df_buffer_fcov_wide %>% dplyr::select(-c(site)) %>% 
+    cor()
+  # keep lower triangle
+  cor_matrix[!lower.tri(cor_matrix, diag = FALSE)] <- NA
+  cor_matrix <- cor_matrix[2:nrow(cor_matrix), 1:ncol(cor_matrix)-1]
+  # find the highest correlation
+  max_cor_temp <- max(cor_matrix, na.rm = TRUE)
+  k_temp <- arrayInd(which(cor_matrix == max_cor_temp), dim(cor_matrix))
+  highest_cor_names <- mapply(`[[`, dimnames(cor_matrix), k_temp)
+  # rename rows and cols
+  rownames(cor_matrix) <- rownames(cor_matrix) %>% 
+    stringr::str_replace_all("[[:punct:]]", " ") %>% 
+    stringr::word(2)
+  colnames(cor_matrix) <- colnames(cor_matrix) %>% 
+    stringr::str_replace_all("[[:punct:]]", " ") %>% 
+    stringr::word(2)
+```
+
+### Correlation Matrix
+
+```{r}
+# HTML table of correlation matrix
+options(knitr.kable.NA = "")
+kableExtra::kable(cor_matrix
+    , format = "html" 
+    , caption = "Correlation between forest cover at different buffer sizes"
+    , digits = 3
+  ) %>% 
+  kable_styling(font_size = 11)
+```
+
+### Plot of highest correlation buffer combination
+
+```{r}
+# plot only highest correlation buffers
+ggplot(data = df_buffer_fcov_wide) + 
+  geom_point(
+    mapping = aes_string(y = highest_cor_names[1], x = highest_cor_names[2])
+    , color = "gray30", size = 3
+  ) +
+  labs(
+    title = "Scatter plot of the greatest pair-wise correlation buffer combination"
+    , subtitle = paste0(paste0(
+        highest_cor_names %>% 
+          stringr::str_replace_all("[[:punct:]]", " ") %>% 
+          stringr::word(2)
+        , collapse = " & "
+      ), " correlation = ", round(max_cor_temp,3))
+    , y = paste0(
+        "Forest cover surrounding sample location at "
+        , highest_cor_names[1] %>% 
+            stringr::str_replace_all("[[:punct:]]", " ") %>% 
+            stringr::word(2)
+        , " (%)"
+      )
+    , x = paste0(
+        "Forest cover surrounding sample location at "
+        , highest_cor_names[2] %>% 
+            stringr::str_replace_all("[[:punct:]]", " ") %>% 
+            stringr::word(2)
+        , " (%)"
+      )
+  ) +
+  theme_bw()
+```
+
+### Recreate Figure 2.9 matrix of pairwise plots
+
+```{r}
+# plot with GGally::ggpairs
+my_vars <- names(df_buffer_fcov_wide %>% dplyr::select(-c("site")))
+plt_g <- GGally::ggpairs(
+    data = df_buffer_fcov_wide
+    , columns = my_vars
+    , columnLabels = my_vars %>% stringr::str_replace_all("[[:punct:]]", " ") %>% stringr::word(2)
+    # , upper = "blank"
+    , diag = "blank"
+    , title = "Forest cover surrounding sampling locations calculated at different scales"
+    , xlab = "Forest cover surrounding sampling locations (%)"
+    , ylab = "Forest cover surrounding sampling locations (%)"
+    , switch = "both"
+  ) +
+  theme_bw() + 
+  theme(
+    plot.title = element_text(size=10)
+  )
+# print  plot
+plt_g
+```
+
+### Written Answer
+
+Where do you see the greatest correlation in each pairwise combination of scales? Is this surprising?
+
+<span style="color: teal;">
+The greatest correlation in each pairwise combination of scales occurs between the buffers of `r paste0(paste0(highest_cor_names %>% stringr::str_replace_all("[[:punct:]]", " ") %>% stringr::word(2), collapse= " & "), " correlation = ", round(max_cor_temp,3))`. This is not surprising that the greatest correlation occurs between the largest buffer sizes considered because as the spatial extent is increased, while holding grain constant, we are effectively increasing our sample size. As we increase the sample size by increasing the buffer, we expect that the sample mean will converge on the population mean (full raster extent).
+</span>
+
+
+```{r, include=FALSE, eval=FALSE}
+# view forest cover in 500m buffer of survey site 1
+forest_crop %>% 
+  terra::crop(sites %>% dplyr::slice(n=1) %>% sf::st_buffer(dist = 500)) %>% 
+  as.data.frame(xy = TRUE) %>% 
+  dplyr::rename(is_forest = 3) %>% 
+  dplyr::mutate(is_forest = as.factor(is_forest)) %>% 
+  ggplot(data=.) +
+    geom_raster(mapping=aes(x=x, y=y, fill=is_forest)) + 
+    geom_sf(data = sites %>% dplyr::slice(n=1), size = 3) +
+    geom_sf_label(
+      data = sites %>% dplyr::slice(n=1)
+      , aes(label=site)
+      , vjust = 1.3
+    ) +
+    scale_fill_manual(values = c("gray90", "forestgreen")) +
+    scale_x_continuous(expand = c(0, 0)) +
+    scale_y_continuous(expand = c(0, 0)) +
+    labs(title="Forest cover in 500m buffer of example survey site", fill = "is forest", x="", y="") +
+    theme_bw() +
+    theme(
+      legend.position = "top"
+      , legend.direction = "horizontal"
+    )
+
+
+# seq(from = 500, to = 5000, by = 500)
 #Hint:
 #ggplot()+
 #  geom_point()+
@@ -268,7 +452,13 @@ Using intervals of 500 m and a maximum range of 5000 m (minimum range of 500 m),
 #  labs(y = "Forest cover surrounding sample location at XXkm (%)", x = "Forest cover surrounding sample   location at XXkm (%))")
 ```
 
+```{r, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
+remove(list = ls()[grep("_temp",ls())])
+gc()
+```
+
 ## Question 7
+
 Generate Figure 2.11 (only panels a and b) using ggplot. Use 500 m intervals and a maximum range of 5000 m (minimum range of 500 m). What does this suggest about the scale of drivers of occurrence for five-lined skinks? Where is the strongest association? How does your conclusion differ (or not) from the results of Fletcher and Fortin? Do you believe the scale of effect has been captured by the scales sampled? Be sure to add appropriate labels. (12 pts) 
 
 
