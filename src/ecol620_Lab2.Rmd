@@ -388,6 +388,8 @@ ggplot(data = df_buffer_fcov_wide) +
 
 ### Recreate Figure 2.9 matrix of pairwise plots
 
+See [Fletcher and Fortin (2018)](https://link.springer.com/book/10.1007/978-3-030-01989-1) Figure 2.9 on page 39
+
 ```{r}
 # plot with GGally::ggpairs
 my_vars <- names(df_buffer_fcov_wide %>% dplyr::select(-c("site")))
@@ -532,5 +534,10 @@ cowplot::plot_grid(
 )
 ```
 
+### Written Answer
+
 What does this suggest about the scale of drivers of occurrence for five-lined skinks? Where is the strongest association? How does your conclusion differ (or not) from the results of Fletcher and Fortin? Do you believe the scale of effect has been captured by the scales sampled? Be sure to add appropriate labels.
 
+<span style="color: teal;">
+The scale with the best fit to the data (e.g., highest log-likelihood) based on the buffers sizes considered in this analysis is at **`r df_logistic %>% dplyr::filter(log_likelihood == max(df_logistic$log_likelihood)) %>% dplyr::pull(var = buffer_m) %>% scales::comma()`m**. This means that, based on the log-likelihoods of the models considered, forest cover within **`r df_logistic %>% dplyr::filter(log_likelihood == max(df_logistic$log_likelihood)) %>% dplyr::pull(var = buffer_m) %>% scales::comma()`m** is most supported by the data for determining the presence of five-lined skinks. This conclusion differs with the results of [Fletcher and Fortin (2018)](https://link.springer.com/book/10.1007/978-3-030-01989-1) who determined the "scale of the effect" for this data at 2,000m, presumably using the same data. It is possible that this disagreement is due to different data vintages between the two analyses; otherwise, the differences are likely due to methodology. Based on this analysis, I do not believe that the scale of effect has been adequately captured by the scales sampled. The highest log-likelihood occurred at the greatest buffer size considered and it is possible that even greater buffer sizes not considered in this analysis would have had greater support based on the data.
+</span>
