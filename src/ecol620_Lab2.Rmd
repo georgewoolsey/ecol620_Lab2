@@ -146,7 +146,7 @@ ggplot(data = df_grain_variance) +
   scale_x_log10() +
   labs(
     y = "Log(spatial variance)"
-    , x = "Log( grain)"
+    , x = "Log(grain)"
   ) +
   theme_bw() 
 ```
@@ -224,14 +224,37 @@ gc()
 
 # Five-lined Skink Data (multi-scale analysis)
 
-
 ## Question 5
+
 Once you have cropped raster “nlcd” using a 10km barrier from the min and max coordinates of the reptile sampling locations (Lines 245-249), how many cells remain? What percent reduction did you see from the original raster?  (3 pts)
 
 ```{r}
-
+# load nlcd raster
+nlcd <- terra::rast("../data/nlcd2011SE/nlcd2011SE.tif") %>% 
+  as.factor()
+# load site and reptile data
+sites <- sf::st_read("../data/reptiledata/reptiledata.shp") %>% 
+  sf::st_set_crs(., value = terra::crs(nlcd))
+# create custom color palette
+my_col <- c("black","blue","darkorange","red","darkred","grey30","grey50", "lightgreen",
+            "green", "darkgreen", "yellow", "goldenrod", "purple", "orchid","lightblue", "lightcyan")
+# crop nlcd to site data + buffer
+my_buffer_m <- 10000 # 10000 = 10,000m = 10km
+nlcd_crop <- nlcd %>% 
+  terra::crop(terra::ext(
+    sf::st_bbox(sites)[1] - my_buffer_m # xmin
+    , sf::st_bbox(sites)[3] + my_buffer_m # xmax
+    , sf::st_bbox(sites)[2] - my_buffer_m # ymin
+    , sf::st_bbox(sites)[4] + my_buffer_m # ymax
+  )) 
+# calculate cell reduction
+cell_reduction <- terra::ncell(nlcd) - terra::ncell(nlcd_crop)
+pct_cell_reduction <- (terra::ncell(nlcd_crop) - terra::ncell(nlcd)) / terra::ncell(nlcd)
 ```
 
+<span style="color: teal;">
+The original NLCD raster contained **`r terra::ncell(nlcd) %>% scales::comma(accuracy = 1)`** cells. The NLCD raster cropped to the survey site data extent with a 10km buffer contains **`r terra::ncell(nlcd_crop) %>% scales::comma(accuracy = 1)`** cells. The number of cells decreased by **`r cell_reduction %>% scales::comma(accuracy = 1)`** for a **`r pct_cell_reduction %>% scales::percent(accuracy = 0.1)`** change.
+</span>
 
 ## Question 6
 Using intervals of 500 m and a maximum range of 5000 m (minimum range of 500 m), where do you see the greatest correlation in each pairwise combination of scales? Is this surprising? Plot the scatter plot of the greatest pair-wise correlation combination. See Figure 2.9 for an example of many similar pairwise plots. (5 pts)
