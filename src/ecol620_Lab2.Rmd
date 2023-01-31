@@ -219,7 +219,7 @@ Note that the provided DEM overlaps portions of **`r sort(state_list)`** as show
 </span>
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE, include=FALSE}
-remove(list = ls()[grep("_temp",ls())])
+remove(list = ls())
 gc()
 ```
 
@@ -229,7 +229,7 @@ gc()
 
 Once you have cropped raster “nlcd” using a 10km barrier from the min and max coordinates of the reptile sampling locations (Lines 245-249), how many cells remain? What percent reduction did you see from the original raster?  (3 pts)
 
-```{r}
+```{r, results='hide', warning=FALSE, message=FALSE}
 # load nlcd raster
 nlcd <- terra::rast("../data/nlcd2011SE/nlcd2011SE.tif") %>% 
   as.factor()
@@ -463,12 +463,73 @@ Generate Figure 2.11 (only panels a and b) using ggplot. Use 500 m intervals and
 
 
 ```{r}
-#Hint (for the beta plot):
-#ggplot()+
-#  geom_point(data=XX_data, aes(x=XX_size, y=XX_coef))+
-#  geom_errorbar(data=buffer_data, aes(x=XX,ymin=XX, ymax=XX), colour="black", width=.1)
+# load the reptile data on southeastern five-lined skinks (FLSK) and 
+flsk <- read.csv("../data/reptiledata/reptiles_flsk.csv", header=T)
+# merge it to our summaries of forest cover calculated at different scales
+df_buffer_fcov <- df_buffer_fcov %>% 
+  dplyr::mutate(pct_forest_cover_int = pct_forest_cover*100) %>% 
+  dplyr::left_join(flsk, by = c("site" = "site"))
+# function to run logistic regression of presence on forest cover
+fn_logistic_buffers <- function(my_buffer_m) {
+  glm_temp <- glm(
+    data = df_buffer_fcov %>% dplyr::filter(buffer_m == my_buffer_m)
+    , formula = pres ~ pct_forest_cover_int
+    , family = "binomial"
+  )
+  # return data frame
+  return(
+    data.frame(
+      buffer_m = my_buffer_m
+      , beta = coef(glm_temp)[2] %>% as.numeric
+      , log_likelihood = logLik(glm_temp) %>% as.numeric
+      # just the beta CI's
+      , lower = confint(glm_temp)[2,1]
+      , upper = confint(glm_temp)[2,2]
+    )
+  )
+}
+# run logistic regression for all buffer sizes
+df_logistic <- df_buffer_fcov$buffer_m %>% unique() %>% 
+  purrr::map_dfr(fn_logistic_buffers)
+# create plot for log-likelihood
+  # The log-likelihood for logistic regression models, where the probability 
+  # of skink occurrence is modeled as a function of the percent forest, calculated 
+  # at different scales using a circular buffer around points (0.5–5 km). 
+  # A higher log-likelihood suggests a better fit of the model to the data.
+plt_ll <- ggplot(data = df_logistic, mapping = aes(x = buffer_m, y = log_likelihood)) +
+  geom_line() + 
+  geom_point(shape = 21, color = "black", fill = "gray", size = 3) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(
+    x = "Forest cover scale (m)"
+    , y = "Log-likelihood"
+  ) +
+  theme_bw() +
+  theme(
+    legend.position = "none"
+  )
+# create plot for beta
+  # The parameter estimates for the effect of forest cover on 
+  # the probability of skink occurrence using different sized buffers. 
+  # Note the similarity in estimates among scales.
+plt_beta <- ggplot(data = df_logistic, mapping = aes(x = buffer_m)) +
+  geom_errorbar(mapping = aes(ymin = lower, ymax = upper), color = "black", width = 0.1) + 
+  geom_point(mapping = aes(y = beta), shape = 21, color = "black", fill = "white", size = 3) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(
+    x = "Forest cover scale (m)"
+    , y = latex2exp::TeX("$\\beta$ (95% CI)")
+  ) +
+  theme_bw() +
+  theme(
+    legend.position = "none"
+  )
+# combine plots
+cowplot::plot_grid(
+  plotlist =  list(plt_ll, plt_beta)
+  , nrow = 1
+)
 ```
 
-
-
+What does this suggest about the scale of drivers of occurrence for five-lined skinks? Where is the strongest association? How does your conclusion differ (or not) from the results of Fletcher and Fortin? Do you believe the scale of effect has been captured by the scales sampled? Be sure to add appropriate labels.
 
