@@ -1971,16 +1971,8 @@ nlcd &lt;- terra::rast(&quot;../data/nlcd2011SE/nlcd2011SE.tif&quot;) %&gt;%
   as.factor()
 # load site and reptile data
 sites &lt;- sf::st_read(&quot;../data/reptiledata/reptiledata.shp&quot;) %&gt;% 
-  sf::st_set_crs(., value = terra::crs(nlcd))</code></pre>
-<pre><code>## Reading layer `reptiledata&#39; from data source 
-##   `C:\Data\ECOL620\ecol620_Lab2\data\reptiledata\reptiledata.shp&#39; 
-##   using driver `ESRI Shapefile&#39;
-## Simple feature collection with 85 features and 4 fields
-## Geometry type: POINT
-## Dimension:     XY
-## Bounding box:  xmin: 812598.9 ymin: 786930.5 xmax: 1373597 ymax: 1014229
-## CRS:           NA</code></pre>
-<pre class="r"><code># create custom color palette
+  sf::st_set_crs(., value = terra::crs(nlcd))
+# create custom color palette
 my_col &lt;- c(&quot;black&quot;,&quot;blue&quot;,&quot;darkorange&quot;,&quot;red&quot;,&quot;darkred&quot;,&quot;grey30&quot;,&quot;grey50&quot;, &quot;lightgreen&quot;,
             &quot;green&quot;, &quot;darkgreen&quot;, &quot;yellow&quot;, &quot;goldenrod&quot;, &quot;purple&quot;, &quot;orchid&quot;,&quot;lightblue&quot;, &quot;lightcyan&quot;)
 # crop nlcd to site data + buffer
