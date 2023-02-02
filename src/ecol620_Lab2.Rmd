@@ -104,10 +104,13 @@ raster_temp %>% as.data.frame(xy = TRUE) %>%
         , ", Variance: "
         , terra::global(raster_temp, fun = "sd")[[1]]^2 %>% scales::comma(accuracy = .01)
       )
+      , x = "x"
+      , y = "y"
     ) +
     theme_bw() +
     theme(
       legend.position = "none"
+      , axis.title = element_text(size = 8)
     )
 ```
 
@@ -196,8 +199,8 @@ ggplot() +
   labs(
     title = "Elevation map using DEM"
     , subtitle = paste0(sort(state_list), collapse = ", ")
-    , x = ""
-    , y = ""
+    , x = "Longitude"
+    , y = "Latitude"
     , fill = "Elev. (m)"
   ) +
   theme_bw() +
@@ -205,9 +208,10 @@ ggplot() +
     legend.position = "bottom"
     , legend.direction = "horizontal"
     , legend.margin = margin(0,0,0,0)
-    , legend.box.margin = margin(-21,0,2,0)
+    , legend.box.margin = margin(-7,0,2,0)
     , legend.text = element_text(size = 7, angle = 25, hjust = 0.7)
     , legend.title = element_text(size = 7)
+    , axis.title = element_text(size = 7)
     , axis.text.y = element_text(size = 7)
     , axis.text.x = element_text(size = 7, angle = 35, hjust = 0.7)
     , panel.border = element_blank()
@@ -383,7 +387,11 @@ ggplot(data = df_buffer_fcov_wide) +
         , " (%)"
       )
   ) +
-  theme_bw()
+  theme_bw() + 
+  theme(
+    axis.title = element_text(size = 9)
+  )
+  
 ```
 
 ### Recreate Figure 2.9 matrix of pairwise plots
@@ -399,15 +407,11 @@ plt_g <- GGally::ggpairs(
     , columnLabels = my_vars %>% stringr::str_replace_all("[[:punct:]]", " ") %>% stringr::word(2)
     # , upper = "blank"
     , diag = "blank"
-    , title = "Forest cover surrounding sampling locations calculated at different scales"
     , xlab = "Forest cover surrounding sampling locations (%)"
     , ylab = "Forest cover surrounding sampling locations (%)"
     , switch = "both"
   ) +
-  theme_bw() + 
-  theme(
-    plot.title = element_text(size=10)
-  )
+  theme_bw()
 # print  plot
 plt_g
 ```
@@ -510,6 +514,7 @@ plt_ll <- ggplot(data = df_logistic, mapping = aes(x = buffer_m, y = log_likelih
   theme_bw() +
   theme(
     legend.position = "none"
+    , axis.title = element_text(size = 9)
   )
 # create plot for beta
   # The parameter estimates for the effect of forest cover on 
@@ -526,6 +531,7 @@ plt_beta <- ggplot(data = df_logistic, mapping = aes(x = buffer_m)) +
   theme_bw() +
   theme(
     legend.position = "none"
+    , axis.title = element_text(size = 9)
   )
 # combine plots
 cowplot::plot_grid(
